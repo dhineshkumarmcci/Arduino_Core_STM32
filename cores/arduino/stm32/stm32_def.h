@@ -78,6 +78,7 @@ extern "C"{
 
 // weaked functions declaration
 void SystemClock_Config(void);
+uint32_t setup_calibrateSystemClock(void);
 
 void _Error_Handler(const char *, int);
 

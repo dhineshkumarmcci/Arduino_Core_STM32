@@ -182,4 +182,11 @@ void SystemClock_Config(void)
 
   /* SysTick_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+
+  /* Calibrate the System clock to set the best calibration value */
+
+  /* Commented for Real-time deployment, as it will throw redefinition error*/
+  /* RTC overrides for "weak" definitions in core HAL should be moved to	*/
+  /* calibration source file "systemclock_calib"							*/
+  // setup_calibrateSystemClock();
 }
