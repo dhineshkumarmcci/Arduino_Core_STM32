@@ -31,9 +31,11 @@ static void rtccount_begin();
 static uint16_t rtccount_read();
 uint32_t SystemClock_Calib(void);
 
+static LPTIM_HandleTypeDef *hlptim;
+
 uint32_t calibTime;
 uint32_t calibValue;
-uint16_t lptimCounter;
+int32_t errorPpmInt;
 
 /**
   * @brief  The application entry point.
@@ -229,12 +231,28 @@ bool rtcbegin() {
 uint32_t setup_calibrateSystemClock(void) {
     uint32_t calibStartTime;
 
-	calibStartTime = millis();
-	calibValue = Stm32_CalibrateSystemClock();
-	calibTime = millis() - calibStartTime;
+    calibStartTime = millis();
+    calibValue = Stm32_CalibrateSystemClock();
+    calibTime = millis() - calibStartTime;
 
     rtccount_begin();
-	lptimCounter = rtccount_read();
+    lptimCounter = rtccount_read();
+
+    uint32_t t1_micros = micros();
+    uint16_t t1_lptim = rtccount_read();
+
+    delay(1000); // one second, supposedly
+
+    uint32_t t2_micros = micros();
+    uint16_t t2_lptim = rtccount_read();
+
+    // compute error
+    uint16_t lpDelta = uint16_t(t2_lptim - t1_lptim);
+
+    float observedSysclkSecs = ((t2_micros - t1_micros) / 1e6f);
+    float observedLptimSecs =  lpDelta / 32768.0f;
+    float errorPpm = (observedSysclkSecs / observedLptimSecs - 1.0f) * 1e6f;
+    errorPpmInt = errorPpm;
 }
 
 uint32_t Stm32_CalibrateSystemClock(void)
@@ -454,9 +472,13 @@ MeasureMicrosPerRtcSecond(
 
 static void rtccount_begin()
     {
+    HAL_LPTIM_MspInit(hlptim);
+
     // enable clock to LPTIM1
     __HAL_RCC_LPTIM1_CLK_ENABLE();
     auto const pLptim = LPTIM1;
+
+    HAL_LPTIM_Init(hlptim);
 
     // set LPTIM1 clock to LSE clock.
     __HAL_RCC_LPTIM1_CONFIG(RCC_LPTIM1CLKSOURCE_LSE);
